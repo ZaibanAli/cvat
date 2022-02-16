@@ -1,0 +1,56 @@
+metadata:
+  name: tf-crack-detection-v0.0.1
+  namespace: cvat
+  annotations:
+    name: Crack detection via Tensorflow
+    type: detector
+    framework: tensorflow
+    spec: |
+      [
+        { "id": 0, "name": "normal" },
+        { "id": 1, "name": "crack" }
+      ]
+
+spec:
+  description: Crack Detection on tensorflow - v0.0.1
+  runtime: 'python:3.9'
+  handler: main:handler
+  eventTimeout: 600s
+
+  build:
+    image: cvat/tf.crack_detection
+    baseImage: tensorflow/tensorflow:2.7.1
+
+    env:
+      - name: TF_MODEL
+        value: /opt/nuclio/model
+
+    directives:
+      preCopy:
+        - kind: RUN
+          value: apt update
+        - kind: RUN
+          value: apt install ffmpeg libsm6 libxext6 -y
+        - kind: RUN
+          value: apt install curl
+        - kind: WORKDIR
+          value: /opt/nuclio
+
+      postCopy:
+        - kind: RUN
+          value: pip3 install opencv-python pyyaml
+
+  triggers:
+    myHttpTrigger:
+      maxWorkers: 2
+      kind: 'http'
+      workerAvailabilityTimeoutMilliseconds: 180000
+      attributes:
+        maxRequestBodySize: 52428800 # 50MB
+
+  platform:
+    attributes:
+      restartPolicy:
+        name: always
+        maximumRetryCount: 3
+      mountMode: volume
